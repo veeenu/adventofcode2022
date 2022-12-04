@@ -89,6 +89,6 @@ mod tests {
 
     #[test]
     fn test2() {
-        assert_eq!(run2(SAMPLE02), 157);
+        assert_eq!(run2(SAMPLE02), 70);
     }
 }
