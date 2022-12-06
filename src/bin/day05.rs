@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, ops::Deref, str::{Chars, Split}};
+use std::{collections::VecDeque, ops::Deref};
 
 const INPUT: &str = include_str!(concat!("../../inputs/", module_path!(), ".txt"));
 
@@ -10,26 +10,30 @@ fn it_take<const K: usize, I: Iterator<Item = T>, T: Default + Copy>(mut it: I) 
     r
 }
 
-struct CrateIter<'a>(Chars<'a>);
+#[derive(Debug)]
+struct Crate(Option<char>);
 
-impl<'a> CrateIter<'a> {
-    fn new(line: &'a str) -> Self {
-        Self(line.chars())
-    }
-}
+impl Crate {
+    fn parse(line: &str) -> Vec<Self> {
+        let mut chars = line.chars();
+        let mut crate_line = Vec::new();
 
-impl<'a> Iterator for CrateIter<'a> {
-    type Item = Option<char>;
+        loop {
+            let chunk = it_take(chars.by_ref());
+            match chunk {
+                [' ', ' ', ' '] => crate_line.push(Crate(None)),
+                ['[', c, ']'] => crate_line.push(Crate(Some(c))),
+                a => {
+                    unreachable!("{:?}", a)
+                }
+            }
 
-    fn next(&mut self) -> Option<Self::Item> {
-        let chunk = it_take(self.0.by_ref());
-        let cr = match chunk {
-            [' ', ' ', ' '] => Some(None),
-            ['[', c, ']'] => Some(Some(c)),
-            a => unreachable!("{:?}", a),
-        };
-        self.0.next()?;
-        cr
+            if chars.next().is_none() {
+                break;
+            }
+        }
+
+        crate_line
     }
 }
 
@@ -41,7 +45,7 @@ struct Move {
 }
 
 impl Move {
-    fn new(line: &str) -> Self {
+    fn parse(line: &str) -> Self {
         let [mov, qty, from, src, to, dest] = it_take(line.split(' '));
         assert_eq!(mov, "move");
         assert_eq!(from, "from");
@@ -65,13 +69,13 @@ impl Problem {
         let crates = lines
             .by_ref()
             .take_while(|l| !l.starts_with(" 1"))
-            .map(CrateIter::new)
+            .map(Crate::parse)
             .fold(Vec::new(), |mut o, crates_row| {
                 for (col, crate_item) in crates_row.into_iter().enumerate() {
                     if o.len() <= col {
                         o.push(VecDeque::new());
                     }
-                    if let Some(c) = crate_item {
+                    if let Crate(Some(c)) = crate_item {
                         o[col].push_front(c);
                     }
                 }
@@ -81,7 +85,7 @@ impl Problem {
 
         lines.next();
 
-        let moves = lines.map(Move::new);
+        let moves = lines.map(Move::parse).collect();
 
         Self(crates, moves)
     }
