@@ -12,11 +12,7 @@ fn run1(input: &str) -> usize {
                 })
                 .collect::<Vec<_>>()[0..2]
             {
-                if (a1 <= b1 && a2 >= b2) || (a1 >= b1 && a2 <= b2) {
-                    1usize
-                } else {
-                    0usize
-                }
+                usize::from((a1 <= b1 && a2 >= b2) || (a1 >= b1 && a2 <= b2))
             } else {
                 panic!()
             }
@@ -36,12 +32,8 @@ fn run2(input: &str) -> usize {
                 })
                 .collect::<Vec<_>>()[0..2]
             {
-                if (a1 <= b1 && a2 >= b1) || (a1 <= b2 && a2 >= b2) ||
-                    (b1 <= a1 && b2 >= a1) || (b1 <= a2 && b2 >= a2) {
-                    1usize
-                } else {
-                    0usize
-                }
+                usize::from((a1 <= b1 && a2 >= b1) || (a1 <= b2 && a2 >= b2) ||
+(b1 <= a1 && b2 >= a1) || (b1 <= a2 && b2 >= a2))
             } else {
                 panic!()
             }

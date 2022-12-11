@@ -171,7 +171,7 @@ fn run2(input: &str) -> usize {
     let mut monkeys = Monkey::parse(input.trim());
     let mut monkey_actions = vec![0usize; monkeys.len()];
 
-    let modulo = monkeys.iter().map(|i| i.test).fold(1, |o, i| o * i);
+    let modulo = monkeys.iter().map(|i| i.test).product();
 
     for i in 1..=10000 {
         for m in 0..monkeys.len() {
