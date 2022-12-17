@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::VecDeque};
+use std::cmp::Ordering;
 
 use itertools::{EitherOrBoth, Itertools};
 use nom::{
@@ -84,8 +84,8 @@ fn cmp_list(pkt1: &AoCList, pkt2: &AoCList, indent: usize) -> Ordering {
         (List(pkt1), List(pkt2)) if pkt1.is_empty() && !pkt2.is_empty() => Ordering::Less,
         (List(pkt1), List(pkt2)) if !pkt1.is_empty() && pkt2.is_empty() => Ordering::Greater,
         (List(pkt1), List(pkt2)) => pkt1
-            .into_iter()
-            .zip_longest(pkt2.into_iter())
+            .iter()
+            .zip_longest(pkt2.iter())
             .map(|a| match a {
                 EitherOrBoth::Both(a, b) => cmp_list(a, b, indent + 1),
                 EitherOrBoth::Right(_) => Ordering::Less,
@@ -185,7 +185,7 @@ fn main() {
     dbg!(run1(INPUT.trim()));
     dbg!(run2(INPUT.trim()));
 }
-
+#[cfg(test)]
 const SAMPLE01: &str = r#"
 [1,1,3,1,1]
 [1,1,5,1,1]
@@ -213,11 +213,13 @@ const SAMPLE01: &str = r#"
 
 "#;
 
+#[cfg(test)]
 const SAMPLE02: &str = r#"
 [[[],8,8,[]],[10,[10,[8,7],1,[5,9,9,1,7],4],5],[1,8,[5,1,[9,7,10,5],7],[[6,7],[8],[9],0,6],4]]
 [[[]],[[8,4],7,3,[]],[[],10,[5,[1],[8,3,2,1]]],[[[2,3,10,2]],4,1,4],[9,2]]
 "#;
 
+#[cfg(test)]
 const SAMPLE03: &str = r#"
 [1,1,3,1,1]
 [1,1,5,1,1]
@@ -253,8 +255,8 @@ mod tests {
 
     #[test]
     fn test1() {
-        //run1(SAMPLE02);
-        //assert_eq!(run1(SAMPLE01), 13);
+        run1(SAMPLE02);
+        assert_eq!(run1(SAMPLE01), 13);
     }
 
     #[test]

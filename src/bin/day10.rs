@@ -70,6 +70,7 @@ fn main() {
     run2(INPUT.trim());
 }
 
+#[cfg(test)]
 const SAMPLE01: &str = r#"
 addx 15
 addx -11

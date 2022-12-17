@@ -101,7 +101,7 @@ fn dfs<'a>(
 
     // Move to another node.
     let flow = cur_node.adj.iter().fold(flow, |o, edge| {
-        let sub_flow = dfs(nodes, &open_valves, cache, time_left - 1, edge, elephant);
+        let sub_flow = dfs(nodes, open_valves, cache, time_left - 1, edge, elephant);
         i64::max(sub_flow, o)
     });
 
@@ -141,6 +141,7 @@ fn main() {
     dbg!(run2(INPUT.trim()));
 }
 
+#[cfg(test)]
 const SAMPLE01: &str = r#"
 Valve AA has flow rate=0; tunnels lead to valves DD, II, BB
 Valve BB has flow rate=13; tunnels lead to valves CC, AA

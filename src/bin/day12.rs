@@ -3,8 +3,6 @@ use std::{
     io::Write,
 };
 
-use itertools::Itertools;
-
 const INPUT: &str = include_str!(concat!("../../inputs/", module_path!(), ".txt"));
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -28,11 +26,6 @@ struct Grid {
 impl Grid {
     fn val(&self, Point(x, y): Point) -> Cell {
         self.data[x + y * self.width]
-    }
-
-    fn edges(&self) -> impl Iterator<Item = (Point, Point)> + '_ {
-        self.nodes()
-            .flat_map(|src| self.neighborhood(src).map(move |dst| (src, dst)))
     }
 
     fn neighborhood(&self, src: Point) -> impl Iterator<Item = Point> + '_ {
@@ -181,6 +174,7 @@ fn main() {
     dbg!(run2(INPUT.trim()));
 }
 
+#[cfg(test)]
 const SAMPLE01: &str = r#"
 Sabqponm
 abcryxxl

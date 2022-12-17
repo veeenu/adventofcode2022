@@ -128,6 +128,7 @@ fn main() {
     dbg!("{}", run2(INPUT.trim()));
 }
 
+#[cfg(test)]
 const SAMPLE01: &str = r#"
 R 4
 U 4
@@ -139,6 +140,7 @@ L 5
 R 2
 "#;
 
+#[cfg(test)]
 const SAMPLE02: &str = r#"
 R 5
 U 8

@@ -37,13 +37,11 @@ fn parse(input: &str) -> impl Iterator<Item = (Sensor, Beacon)> + '_ {
 
 fn run1(input: &'static str, target: i64) -> usize {
     let values = parse(input)
-        .map(|(sensor, beacon)| {
+        .flat_map(|(sensor, beacon)| {
             let d = sensor.manhattan_distance(beacon).abs();
             let radius_x = d - (sensor.1 - target).abs();
-            let range_x = (sensor.0 - radius_x)..(sensor.0 + radius_x);
-            range_x
+            (sensor.0 - radius_x)..(sensor.0 + radius_x)
         })
-        .flatten()
         .collect::<HashSet<_>>();
 
     values.len()
@@ -55,7 +53,7 @@ fn run2(input: &'static str, max: i64) -> i64 {
         .collect::<Vec<_>>();
 
     let r = (0..=max).find_map(|y| {
-        let tlr = sensor_md
+        let mut this_line_ranges = sensor_md
             .iter()
             .filter_map(|(sensor, d)| {
                 let radius_x = d - (sensor.1 - y).abs();
@@ -65,10 +63,8 @@ fn run2(input: &'static str, max: i64) -> i64 {
                     Some((sensor.0 - radius_x, sensor.0 + radius_x))
                 }
             })
-            .sorted_by_key(|r| r.0).collect::<Vec<_>>();
+            .sorted_by_key(|r| r.0);
 
-
-        let mut this_line_ranges = tlr.clone().into_iter();
         let mut last_end = this_line_ranges.next().unwrap().1;
         for (start, end) in this_line_ranges {
             if last_end >= start - 1 {
@@ -91,6 +87,7 @@ fn main() {
     println!("Done");
 }
 
+#[cfg(test)]
 const SAMPLE01: &str = r#"
 Sensor at x=2, y=18: closest beacon is at x=-2, y=15
 Sensor at x=9, y=16: closest beacon is at x=10, y=16

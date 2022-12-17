@@ -123,6 +123,7 @@ fn main() {
     dbg!("{}", run2(INPUT.trim()));
 }
 
+#[cfg(test)]
 const SAMPLE01: &str = r#"
 30373
 25512

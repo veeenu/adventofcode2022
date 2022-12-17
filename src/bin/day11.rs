@@ -206,6 +206,7 @@ fn main() {
     dbg!(run2(INPUT.trim()));
 }
 
+#[cfg(test)]
 const SAMPLE01: &str = r#"
 Monkey 0:
   Starting items: 79, 98
@@ -236,17 +237,12 @@ Monkey 3:
     If false: throw to monkey 1
 "#;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[test]
+fn test1() {
+    assert_eq!(run1(SAMPLE01), 10605);
+}
 
-    #[test]
-    fn test1() {
-        assert_eq!(run1(SAMPLE01), 10605);
-    }
-
-    #[test]
-    fn test2() {
-        assert_eq!(run2(SAMPLE01), 2713310158);
-    }
+#[test]
+fn test2() {
+    assert_eq!(run2(SAMPLE01), 2713310158);
 }
