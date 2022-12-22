@@ -1,8 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet, VecDeque},
-    io::Write,
-    time::{Duration, Instant},
-};
+use std::{io::Write, time::Instant};
 
 const INPUT: &str = include_str!(concat!("../../inputs/", module_path!(), ".txt"));
 
@@ -56,7 +52,7 @@ enum Shape {
 }
 
 impl Shape {
-    fn size(self) -> (usize, usize) {
+    fn size(&self) -> (usize, usize) {
         match self {
             Shape::Horiz => (4, 1),
             Shape::Plus => (3, 3),
@@ -66,18 +62,18 @@ impl Shape {
         }
     }
 
-    fn is_lit_bro(self, x: usize, y: usize) -> bool {
+    fn is_lit_bro(&self, x: usize, y: usize) -> bool {
         match self {
             Shape::Horiz => y == 0 && x <= 3,
-            Shape::Plus => [(1, 0), (0, 1), (1, 1), (2, 1), (1, 2)].contains(&(x, y)),
-            Shape::Corner => [(0, 0), (1, 0), (2, 0), (2, 1), (2, 2)].contains(&(x, y)),
+            Shape::Plus => matches!((x, y), (1, 0) | (0, 1) | (1, 1) | (2, 1) | (1, 2)),
+            Shape::Corner => matches!((x, y), (0, 0) | (1, 0) | (2, 0) | (2, 1) | (2, 2)),
             Shape::Vert => x == 0 && y <= 3,
             Shape::Square => x <= 1 && y <= 1,
         }
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 struct Rock {
     shape: Shape,
     x: usize,
@@ -85,7 +81,7 @@ struct Rock {
 }
 
 impl Rock {
-    fn action(&mut self, action: Action, others: &[Rock]) -> bool {
+    fn action(&mut self, action: Action, others: &[Rock], force: bool) -> bool {
         let mut this_next_pos = self.clone();
         match action {
             Action::Left => {
@@ -102,11 +98,13 @@ impl Rock {
             }
         }
 
-        if others.is_empty()
+        if force
+            || others.is_empty()
             || !others
                 .iter()
                 .rev()
-                .any(|other_rock| other_rock.collides(this_next_pos))
+                .take(8)
+                .any(|other_rock| other_rock.collides(&this_next_pos))
         {
             self.x = this_next_pos.x;
             self.y = this_next_pos.y;
@@ -116,7 +114,7 @@ impl Rock {
         }
     }
 
-    fn is_lit_bro(self, (x, y): (usize, usize)) -> bool {
+    fn is_lit_bro(&self, (x, y): (usize, usize)) -> bool {
         let (w, h) = self.shape.size();
         if x < self.x || y < self.y || x > (self.x + w) || y > (self.y + h) {
             false
@@ -127,17 +125,17 @@ impl Rock {
         }
     }
 
-    fn collides(self, other: Rock) -> bool {
+    fn collides(&self, other: &Rock) -> bool {
         let (ax1, ay1, (aw, ah)) = (self.x, self.y, self.shape.size());
         let (bx1, by1, (bw, bh)) = (other.x, other.y, other.shape.size());
         let (ax2, ay2) = (ax1 + aw, ay1 + ah);
         let (bx2, by2) = (bx1 + bw, by1 + bh);
 
         if ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1 {
-            let minx = usize::min(ax1, bx1);
-            let miny = usize::min(ay1, by1);
-            let maxx = usize::max(ax2, bx2);
-            let maxy = usize::max(ay2, by2);
+            let minx = usize::max(ax1, bx1);
+            let miny = usize::max(ay1, by1);
+            let maxx = usize::min(ax2, bx2);
+            let maxy = usize::min(ay2, by2);
             for y in miny..maxy {
                 for x in minx..maxx {
                     if self.is_lit_bro((x, y)) && other.is_lit_bro((x, y)) {
@@ -162,10 +160,10 @@ fn simulate(input: &'static str, count: usize) -> usize {
         Shape::Vert,
         Shape::Square,
     ]);
-    let mut rocks: Vec<Rock> = Vec::with_capacity(count);
+    let mut rocks: Vec<Rock> = Vec::new();
     let mut max_y_ever = 0usize;
 
-    let mut print = |rock: Rock, rocks: &[Rock]| {
+    let mut print = |rock: &Rock, rocks: &[Rock]| {
         let maxy = rocks
             .iter()
             .map(|rock| rock.y + rock.shape.size().1)
@@ -187,19 +185,14 @@ fn simulate(input: &'static str, count: usize) -> usize {
             }
             println!("|");
         }
-        println!("");
+        println!();
     };
 
     let mut max_y_in_queue = 0usize;
+    let mut height_increases = Vec::new();
 
     for i in 0..count {
         let maxy = max_y_in_queue;
-        let maxy = rocks
-            .iter()
-            .rev()
-            .map(|rock| rock.y + rock.shape.size().1)
-            .max()
-            .unwrap_or(0);
         let mut current_rock = rock_spawn
             .next()
             .map(|&shape| Rock {
@@ -208,29 +201,54 @@ fn simulate(input: &'static str, count: usize) -> usize {
                 y: maxy + 3,
             })
             .unwrap();
+        let mut cur_loop = 0usize;
         loop {
-            current_rock.action(*actions.next().unwrap(), &rocks);
-            if !current_rock.action(Action::Down, &rocks) {
+            current_rock.action(*actions.next().unwrap(), &rocks, cur_loop < 2);
+            if !current_rock.action(Action::Down, &rocks, cur_loop < 2) {
                 break;
             }
+            cur_loop += 1;
 
             if true {
-                let elapsed = start.elapsed();
-                print!(
-                    "{:.2} {} ({}/s) \r",
-                    elapsed.as_secs_f32(),
-                    i,
-                    (i as f32) / elapsed.as_secs_f32()
-                );
-                std::io::stdout().flush().ok();
+                if i % 100 == 0 {
+                    let elapsed = start.elapsed();
+                    print!(
+                        "{:.2} ({:10.2}/s) {}/{} ({:.2}%)\r",
+                        elapsed.as_secs_f32(),
+                        (i as f32) / elapsed.as_secs_f32(),
+                        i,
+                        count,
+                        100. * (i as f32) / (count as f32)
+                    );
+                    std::io::stdout().flush().ok();
+                }
             } else {
                 println!("\n*** {i}\n{:?}\n_________", current_rock);
-                print(current_rock, &rocks);
-                std::thread::sleep(std::time::Duration::from_millis(500));
+                print(&current_rock, &rocks);
+                std::thread::sleep(std::time::Duration::from_millis(200));
             }
         }
+        let rock_y = current_rock.y + current_rock.shape.size().1;
         rocks.push(current_rock);
-        max_y_in_queue = usize::max(max_y_in_queue, current_rock.y + current_rock.shape.size().1 + 1);
+
+        let height_increase = rock_y.saturating_sub(max_y_in_queue);
+        height_increases.push(height_increase);
+
+        if let Some((len, start)) = find_cycle(&height_increases) {
+            let cycle_height_increase: usize = height_increases[start..start + len].iter().sum();
+            let before_cycle_height: usize = height_increases[0..start].iter().sum();
+            let how_many_cycles: usize = (count - start) / len;
+            let after_cycles_count = (count - start) % len;
+            let after_cycles_height: usize = height_increases[start..start + after_cycles_count]
+                .iter()
+                .sum();
+            let sol =
+                before_cycle_height + after_cycles_height + cycle_height_increase * how_many_cycles;
+            println!("\nSolution {sol}\n");
+            return sol;
+        }
+
+        max_y_in_queue = usize::max(max_y_in_queue, rock_y);
     }
     println!();
 
@@ -239,6 +257,20 @@ fn simulate(input: &'static str, count: usize) -> usize {
         .map(|rock| rock.y + rock.shape.size().1)
         .max()
         .unwrap_or(0)
+}
+
+fn find_cycle<T: Eq>(v: &[T]) -> Option<(usize, usize)> {
+    for cycle_len in 20..(v.len() / 2) {
+        let fst_point = v.len() - cycle_len;
+        let snd_point = v.len() - cycle_len * 2;
+        let fst = &v[fst_point..];
+        let snd = &v[snd_point..fst_point];
+        if fst.iter().zip(snd.iter()).all(|(a, b)| a == b) {
+            println!("\n\nFound cycle of length {cycle_len} starting at {snd_point} {fst_point}\n\n");
+            return Some((cycle_len, snd_point));
+        }
+    }
+    None
 }
 
 fn run1(input: &'static str) -> usize {
@@ -268,6 +300,6 @@ mod tests {
 
     #[test]
     fn test2() {
-        // assert_eq!(run2(SAMPLE01), 1514285714288);
+        assert_eq!(run2(SAMPLE01), 1514285714288);
     }
 }
