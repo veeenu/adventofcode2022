@@ -65,8 +65,8 @@ impl Shape {
     fn is_lit_bro(&self, x: usize, y: usize) -> bool {
         match self {
             Shape::Horiz => y == 0 && x <= 3,
-            Shape::Plus => matches!((x, y), (1, 0) | (0, 1) | (1, 1) | (2, 1) | (1, 2)),
-            Shape::Corner => matches!((x, y), (0, 0) | (1, 0) | (2, 0) | (2, 1) | (2, 2)),
+            Shape::Plus => [(1, 0), (0, 1), (1, 1), (2, 1), (1, 2)].contains(&(x, y)),
+            Shape::Corner => [(0, 0), (1, 0), (2, 0), (2, 1), (2, 2)].contains(&(x, y)),
             Shape::Vert => x == 0 && y <= 3,
             Shape::Square => x <= 1 && y <= 1,
         }
@@ -102,7 +102,7 @@ impl Rock {
             || !others
                 .iter()
                 .rev()
-                .take(8)
+                .take(64)
                 .any(|other_rock| other_rock.collides(&this_next_pos))
         {
             self.x = this_next_pos.x;
@@ -159,7 +159,7 @@ fn simulate(input: &'static str, count: usize) -> usize {
         Shape::Vert,
         Shape::Square,
     ]);
-    let mut rocks: Vec<Rock> = Vec::new();
+    let mut rocks: Vec<Rock> = Vec::with_capacity(count);
     let mut max_y_ever = 0usize;
 
     let mut print = |rock: &Rock, rocks: &[Rock]| {
@@ -184,14 +184,19 @@ fn simulate(input: &'static str, count: usize) -> usize {
             }
             println!("|");
         }
-        println!();
+        println!("");
     };
 
-    let mut max_y_in_queue = 0usize;
-    // let mut height_increases = Vec::new();
+    let mut height_diffs = Vec::new();
 
     for i in 0..count {
-        let maxy = max_y_in_queue;
+        let maxy = rocks
+            .iter()
+            .rev()
+            .take(64)
+            .map(|rock| rock.y + rock.shape.size().1)
+            .max()
+            .unwrap_or(0);
         let mut current_rock = rock_spawn
             .next()
             .map(|&shape| Rock {
@@ -200,52 +205,41 @@ fn simulate(input: &'static str, count: usize) -> usize {
                 y: maxy + 3,
             })
             .unwrap();
-        let mut cur_loop = 0usize;
         loop {
-            current_rock.action(*actions.next().unwrap(), &rocks, cur_loop < 2);
-            if !current_rock.action(Action::Down, &rocks, cur_loop < 2) {
+            current_rock.action(*actions.next().unwrap(), &rocks);
+            if !current_rock.action(Action::Down, &rocks) {
                 break;
             }
-            cur_loop += 1;
 
             if true {
                 let elapsed = start.elapsed();
                 print!(
-                    "{:.2} ({:10.2}/s) {}/{} ({:.2}%)\r",
+                    "{:.2} {} ({}/s) \r",
                     elapsed.as_secs_f32(),
-                    (i as f32) / elapsed.as_secs_f32(),
                     i,
-                    count,
-                    100. * (i as f32) / (count as f32)
+                    (i as f32) / elapsed.as_secs_f32()
                 );
                 std::io::stdout().flush().ok();
             } else {
                 println!("\n*** {i}\n{:?}\n_________", current_rock);
                 print(&current_rock, &rocks);
-                std::thread::sleep(std::time::Duration::from_millis(200));
+                std::thread::sleep(std::time::Duration::from_millis(500));
             }
         }
-        let rock_y = current_rock.y + current_rock.shape.size().1 + 1;
-        max_y_in_queue = usize::max(max_y_in_queue, rock_y);
+
+        if let Some((start, len)) = find_cycle(&height_diffs) {
+            println!("Found cycle starting at {start} of length {len}");
+            let cycle_height: usize = height_diffs[start..start + len].iter().sum();
+            let cycle_count = (count - start).div_euclid(len);
+            let after_count = (count - start).rem_euclid(len);
+            let before_height: usize = height_diffs[0..start].iter().sum();
+            let after_height: usize = height_diffs[start..start + after_count].iter().sum();
+            println!("Before {start}, count {cycle_count}, after {after_count}");
+            return cycle_height * cycle_count + before_height + after_height;
+        }
+        let new_max_y = current_rock.y + current_rock.shape.size().1;
+        height_diffs.push(new_max_y.saturating_sub(maxy));
         rocks.push(current_rock);
-
-        // if let Some((len, start)) = find_cycle(&height_increases) {
-        //     let cycle_height_increase: usize = height_increases[start..start + len].iter().sum();
-        //     let before_cycle_height: usize = height_increases[0..start].iter().sum();
-        //     let how_many_cycles: usize = (count - start) / len;
-        //     let after_cycles_count = (count - start) % len;
-        //     let after_cycles_height: usize = height_increases[start..start + after_cycles_count]
-        //         .iter()
-        //         .sum();
-        //     let sol =
-        //         before_cycle_height + after_cycles_height + cycle_height_increase * how_many_cycles;
-        //     println!("Solution {sol}: drop {start} + {len} * {how_many_cycles} + {after_cycles_count}");
-        //     return sol;
-        // }
-        // let height_increase = rock_y.saturating_sub(max_y_in_queue);
-        // height_increases.push(height_increase);
-
-        // max_y_in_queue = usize::max(max_y_in_queue, rock_y);
     }
     println!();
 
@@ -256,18 +250,14 @@ fn simulate(input: &'static str, count: usize) -> usize {
         .unwrap_or(0)
 }
 
-fn find_cycle<T: Eq>(v: &[T]) -> Option<(usize, usize)> {
-    for cycle_len in 35..(v.len() / 2) {
-        let fst_point = v.len() - cycle_len;
-        let snd_point = v.len() - cycle_len * 2;
-        let fst = &v[fst_point..];
-        let snd = &v[snd_point..fst_point];
-        if fst == snd {
-            println!(
-                "Found cycle of length {cycle_len} starting at {snd_point} {fst_point} {}",
-                v.len()
-            );
-            return Some((cycle_len, snd_point));
+fn find_cycle(v: &Vec<usize>) -> Option<(usize, usize)> {
+    for cycle_start in (0..v.len() / 2).rev() {
+        for cycle_len in 35..(v.len() - cycle_start) / 2 {
+            let fst = &v[cycle_start..cycle_start + cycle_len];
+            let snd = &v[cycle_start + cycle_len..cycle_start + cycle_len * 2];
+            if fst == snd {
+                return Some((cycle_start, cycle_len));
+            }
         }
     }
     None
@@ -300,6 +290,6 @@ mod tests {
 
     #[test]
     fn test2() {
-        assert_eq!(run2(SAMPLE01), 1514285714288);
+        // assert_eq!(run2(SAMPLE01), 1514285714288);
     }
 }
