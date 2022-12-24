@@ -37,33 +37,24 @@ impl Cube {
     }
 }
 
-struct CubeGraph(HashMap<Cube, HashSet<Cube>>);
+struct CubeGraph(Vec<Cube>);
 
 impl CubeGraph {
     fn new(input: &str) -> Self {
-        let mut g = Self(
-            input
-                .trim()
-                .lines()
-                .map(Cube::from)
-                .map(|cube| (cube, Default::default()))
-                .collect::<HashMap<_, _>>(),
-        );
-
-        for c in input.trim().lines().map(Cube::from) {
-            for (k, set) in &mut g.0 {
-                if k.is_adj(&c) {
-                    set.insert(c.clone());
-                }
-            }
-        }
-
-        g
+        Self(input.trim().lines().map(Cube::from).collect())
     }
 
     fn count_blocked_faces(&self) -> usize {
-        self.0.iter()
-            .map(|(cube, adj)| 6 - adj.len())
+        self.0
+            .iter()
+            .map(|a| {
+                6usize
+                    - self
+                        .0
+                        .iter()
+                        .map(|b| if a.is_adj(b) { 1 } else { 0 })
+                        .sum::<usize>()
+            })
             .sum()
     }
 }
