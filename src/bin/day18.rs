@@ -1,6 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    ops,
+};
 
-use itertools::Itertools;
+use itertools::{iproduct, Itertools};
 
 const INPUT: &str = include_str!(concat!("../../inputs/", module_path!(), ".txt"));
 
@@ -57,6 +60,71 @@ impl CubeGraph {
             })
             .sum()
     }
+
+    fn count_air_pockets(&self) -> usize {
+        let (range_x, range_y, range_z) = self.0.iter().fold(
+            (Range::new(), Range::new(), Range::new()),
+            |(rx, ry, rz), cube| (rx.expand(cube.0), ry.expand(cube.1), rz.expand(cube.2)),
+        );
+
+        println!("{range_x:?} {range_y:?} {range_z:?}");
+
+        let (range_x, range_y, range_z) = (
+            range_x.into_range(),
+            range_y.into_range(),
+            range_z.into_range(),
+        );
+
+        let cube_set = self.0.iter().cloned().collect::<HashSet<_>>();
+
+        let cubes = iproduct!(range_x, range_y, range_z);
+
+        cubes
+            .map(|(x, y, z)| {
+                let adjacents = [
+                    Cube(x + 1, y, z),
+                    Cube(x - 1, y, z),
+                    Cube(x, y + 1, z),
+                    Cube(x, y - 1, z),
+                    Cube(x, y, z + 1),
+                    Cube(x, y, z - 1),
+                ];
+
+                // print!("{x},{y},{z}:  ");
+                // for Cube(x, y, z) in &adjacents {
+                //     print!("{x},{y},{z} {} ", cube_set.contains(&Cube(*x, *y, *z)));
+                // }
+                // println!();
+
+                if adjacents.iter().all(|c| cube_set.contains(c)) {
+                    println!("{x},{y},{z}");
+                    6
+                } else {
+                    0
+                }
+            })
+            .sum()
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Range(i32, i32);
+
+impl Range {
+    fn new() -> Self {
+        Self(i32::MAX, 0)
+    }
+
+    fn expand(self, v: i32) -> Self {
+        Self(i32::min(self.0, v), i32::max(self.0, v))
+    }
+
+    fn into_range(self) -> ops::Range<i32> {
+        ops::Range {
+            start: self.0,
+            end: self.1 + 1,
+        }
+    }
 }
 
 fn run1(input: &'static str) -> usize {
@@ -64,7 +132,8 @@ fn run1(input: &'static str) -> usize {
 }
 
 fn run2(input: &'static str) -> usize {
-    0
+    let g = CubeGraph::new(input);
+    g.count_blocked_faces() - g.count_air_pockets()
 }
 
 fn main() {
